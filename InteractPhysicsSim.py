@@ -2,7 +2,7 @@
 # -> Attempt to create a pendulum simulation in pyglet.
 # Author: Justin Bunting
 # Created: 2026/03/30
-# Last Modified: 2026/04/12 22:02
+# Last Modified: 2026/04/13 08:47
 
 
 from math import sin, cos, radians
@@ -18,17 +18,21 @@ import EOMs
 
 # 	initialize window
 
-winSize = 1400 # on Mac, screen coords and render coords differ: want half-size window
+winSize = 1500 # on Mac, screen coords and render coords differ: want half-size window
+winScale = 2 if platform.system() == 'Darwin' else 1
 window = pyglet.window.Window(
-	width=winSize//2 if platform.system() == 'Darwin' else winSize,
-	height=winSize//2 if platform.system() == 'Darwin' else winSize,
+	width=winSize//winScale,
+	height=winSize//winScale,
 	visible=True,
-	resizable=False,
-	caption='Physical Systems'
+	resizable=False, # if resizing is desired, set to True and uncomment event below
+	caption='Physics Simulations'
 )
 
 
 # 	Set EOM values (shared across functions)
+
+origin = (winSize//2, winSize//2)
+currentScene = None
 
 # uncomment to modify!
 # EOMs.mass = [20, 20] # kg
@@ -45,9 +49,10 @@ pSys = PhysicsSystem(function=EOMs.pendulum, x0=[radians(20), 0])
 
 # scene loader based on key press
 def loadScene(symbol):
+	global currentScene
+	currentScene = symbol
 	
 	# render values
-	origin = (winSize//2, winSize//10*5) # 10*8
 	pxLength = [l * metersToPixels for l in EOMs.length]
 	startingAngle = [-40, 45]
 	
@@ -67,16 +72,18 @@ def loadScene(symbol):
 		endPoint2 = Point(	origin[0], origin[1], radius=EOMs.mass[0]-5, yAnch=-pxLength[0], rotationAnch=180, color=(200, 30, 30, 255))
 		trail = 	FadeLine(0, 0, colors=((179, 224, 83, 255), (60, 60, 60, 0)), captureRate=1, strokeWidth=4, maxPoints=50)
 		
-		# attach objects and update actions
-		pSys.addObject(trail)
-		pSys.addAction(trail.addPoint, 0, [('a2posVert', EOMs.length[0]), 'm2px', ('offsetPos', origin)])
+		# attach objects
+		pSys.addObject(trail, 1)
 		pSys.addObject(bar)
-		pSys.addAction(bar.setAngle)
 		pSys.addObject(basePoint) # add after bar to appear above
 		pSys.addObject(endPoint1)
-		pSys.addAction(endPoint1.setAngle)
 		pSys.addObject(endPoint2)
+		
+		# add update actions
+		pSys.addAction(bar.setAngle)
+		pSys.addAction(endPoint1.setAngle)
 		pSys.addAction(endPoint2.setAngle)
+		pSys.addAction(trail.addPoint, 0, [('a2posVert', EOMs.length[0]), 'm2px', ('offsetPos', origin)])
 		
 		# set simulation values
 		pSys.setArgument((0, 0), 'impulseXY', tuple[float, float], False) # impulse is NOT persistent
@@ -95,17 +102,19 @@ def loadScene(symbol):
 		endPoint2 = Point(	origin[0], origin[1], radius=EOMs.mass[0]-5, yAnch=-pxLength[0], rotationAnch=0, color=(200, 30, 30, 255))
 		trail = 	FadeLine(0, 0, colors=((240, 155, 64, 255), (60, 60, 60, 0)), captureRate=1, strokeWidth=4, maxPoints=300)
 		
-		# attach objects and update actions
-		pSys.addObject(trail)
-		pSys.addAction(trail.addPoint, [0, 2], ['rth2xy', 'm2px', ('offsetPos', origin)])
+		# attach objects
+		pSys.addObject(trail, 1)
 		pSys.addObject(spring)
-		pSys.addAction(spring.setLength, 0, ('m2px',))
-		pSys.addAction(spring.setAngle, 2)
 		pSys.addObject(basePoint) # add after spring to appear above
 		pSys.addObject(endPoint1)
+		pSys.addObject(endPoint2)
+		
+		# add update actions
+		pSys.addAction(trail.addPoint, [0, 2], ['rth2xy', 'm2px', ('offsetPos', origin)])
+		pSys.addAction(spring.setLength, 0, ('m2px',))
+		pSys.addAction(spring.setAngle, 2)
 		pSys.addAction(endPoint1.setAnchorY, 0, ('m2px',))
 		pSys.addAction(endPoint1.setAngle, 2)
-		pSys.addObject(endPoint2)
 		pSys.addAction(endPoint2.setAnchorY, 0, ('m2px',))
 		pSys.addAction(endPoint2.setAngle, 2)
 		
@@ -130,7 +139,7 @@ def loadScene(symbol):
 		trail = 	FadeLine(0, 0, colors=((229, 64, 115, 255), (60, 60, 60, 0)), captureRate=1, strokeWidth=4, maxPoints=300)
 		
 		# attach objects (bars first to render points above)
-		pSys.addObject(trail)
+		pSys.addObject(trail, 1)
 		pSys.addObject(bar1)
 		pSys.addObject(bar2)
 		pSys.addObject(basePoint)
@@ -154,12 +163,14 @@ def loadScene(symbol):
 		pSys.setArgument(EOMs.gamma, 'gamma', tuple[float, float])
 		
 
-#	impulse setup (click impulse)
+#	interaction setup (click impulse, hidden list)
 
 clickImpulse = False
 clickStart = 0, 0
 arrow = Arrow(0, 0, 5)
 arrow.setVisible(False)
+
+hidden = {1}
 
 
 #	finish pyglet setup (update, event handlers, run)
@@ -169,15 +180,18 @@ def update(dt):
 
 @window.event
 def on_key_press(symbol, modifiers):
+	global hidden
+	
 	# switch system
 	if symbol in (key._1, key._2, key._3): #, key._4, key._5, key._6, key._7, key._8):
 		loadScene(symbol)
 	
-	# control visibility for cool trails
-	if symbol is key.H:
-		pSys.setVisible(hideSolid=True)
-	elif symbol is key.U:
-		pSys.setVisible(hideSolid=False)
+	# control visibility for better visuals
+	if symbol is key.BRACKETLEFT:
+		hidden ^= {0}
+	elif symbol is key.BRACKETRIGHT:
+		hidden ^= {1}
+	pSys.setVisible(hiddenGroups=hidden)
 	
 	# quick-close because clicking is slow at times..?
 	if symbol is key.ESCAPE:
@@ -210,6 +224,26 @@ def on_mouse_release(x, y, buttons, modifiers):
 		clickImpulse = False
 		arrow.setVisible(False)
 
+# uncomment if window resizing is needed.. doesn't play well with Aerospace app on Mac
+# also, don't forget to set resizeable=True up top in window
+
+# def _reloadAfterResize(dt):
+# 	global winSize, winScale, origin
+# 	# snap window to square using the smaller dimension
+# 	size = min(window.width, window.height)
+# 	window.set_size(size, size)
+# 	winSize = size * winScale
+# 	origin = (winSize // 2, winSize // 2)
+# 	if currentScene is not None:
+# 		loadScene(currentScene)
+	
+# @window.event
+# def on_resize(width, height):
+# 	# debounce: each resize event reschedules the reload, so it only fires once the user
+# 	# stops dragging
+# 	pyglet.clock.unschedule(_reloadAfterResize)
+# 	pyglet.clock.schedule_once(_reloadAfterResize, 0.25)
+# 	return pyglet.event.EVENT_HANDLED
 
 @window.event
 def on_draw():
@@ -219,7 +253,9 @@ def on_draw():
 	arrow.draw()
 	pSys.draw()
 
+
 # 	run app
+
 if __name__ == "__main__":
 	# schedule our update function
 	pyglet.clock.schedule_interval(func=update, interval=1/60)

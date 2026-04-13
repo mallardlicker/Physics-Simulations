@@ -2,7 +2,7 @@
 # -> A class which stores any physics system that will be simulated.
 # Author: Justin Bunting
 # Created: 2026/04/02
-# Last Modified: 2026/04/12 21:58
+# Last Modified: 2026/04/13 08:45
 
 
 
@@ -25,6 +25,7 @@ class PhysicsSystem():
 					t: float = 0,
 					args: Any | None = None):
 		self.reset(function, x0)
+		self.hiddenGroups = set() # ! kept outside of reset for visual consistency: change if necessary
 		
 	def reset(	self,
 		   		function: callable, 
@@ -35,7 +36,6 @@ class PhysicsSystem():
 		self.x0 = x0
 		self.running = True
 		self.isVisible = True
-		self.hideSolid = False
 		
 		# determine what type each argument of function is, and add defaults (zero-filled arguments)
 		# to args list
@@ -48,12 +48,14 @@ class PhysicsSystem():
 		self.t = t
 		self.x = self.x0
 		
-		self.objects = list()
+		self.objects = dict()
 		self.actions = list()
 	
 	# attach an object
-	def addObject(self, obj: Shape):
-		self.objects.append(obj)
+	def addObject(self, obj: Shape, group: int = 0):
+		if group not in self.objects.keys():
+			self.objects[group] = list()
+		self.objects[group].append(obj)
 	
 	# attach an update action
 	def addAction(self,
@@ -159,16 +161,14 @@ class PhysicsSystem():
 	# draw the system's attached objects
 	def draw(self):
 		if self.isVisible:
-			for obj in self.objects:
-				# if hiding solid, pass all non-fadeline objects
-				if self.hideSolid and not isinstance(obj, FadeLine):
-					pass
-				else:
-					obj.draw()
+			for group, objList in self.objects.items():
+				if group not in self.hiddenGroups:
+					for obj in objList:
+						obj.draw()
 	
-	def setVisible(self, isVisible=True, hideSolid=False):
+	def setVisible(self, isVisible=True, hiddenGroups: set[int] | list[int] = []):
 		self.isVisible = isVisible
-		self.hideSolid = hideSolid
+		self.hiddenGroups = set(hiddenGroups)
 	
 	# function to solve IVP given current state (x), function, and time/span
 	def solveIVPInteract(
