@@ -2,10 +2,11 @@
 # -> Attempt to create a pendulum simulation in pyglet.
 # Author: Justin Bunting
 # Created: 2026/03/30
-# Last Modified: 2026/04/12 21:12
+# Last Modified: 2026/04/12 21:31
 
 
-from math import sin, cos, tan, radians, degrees
+from math import sin, cos, radians
+import platform
 
 import pyglet
 from pyglet.window import key, mouse
@@ -18,8 +19,8 @@ from System import *
 
 winSize = 1400 # on Mac, screen coords and render coords differ: want half-size window
 window = pyglet.window.Window(
-	width=winSize/2,
-	height=winSize/2,
+	width=winSize//2 if platform.system() == 'Darwin' else winSize,
+	height=winSize//2 if platform.system() == 'Darwin' else winSize,
 	visible=True,
 	resizable=False,
 	caption='Physical Systems'
