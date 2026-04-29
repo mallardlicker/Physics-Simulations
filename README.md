@@ -1,8 +1,5 @@
---------------------------------------------------------------------------------------
 
-Physics Simulations
-
---------------------------------------------------------------------------------------
+## Physics Simulations
 
 Quick coding of derived ODEs: basically building on functionality along the way, so not the most perfect implementations of rendered shapes etc., but enough to be generally clear in the main file.
 
@@ -13,3 +10,11 @@ Ensure [Pyglet](https://github.com/pyglet/pyglet) is installed, as well as pytho
 python3 InteractPhysicsSim.py
 ```
 Once open, the numbers keys select which simulation is running, clicking and dragging forces the red mass, the `[` and `]` keys hide/unhide the physical system and tracers respectively, and `Esc` closes the window. Make sure you do press the `[` and `]` keys--they change how you'll view the output of the physical system (and are quite beautiful).
+
+# Simulation List
+
+1. Single Pendulum
+2. Spring Pendulum
+3. Double Pendulum
+4. Double Spring Pendulum
+5. N-Body Problem

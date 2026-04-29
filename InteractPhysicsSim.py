@@ -2,7 +2,7 @@
 # -> Attempt to create a pendulum simulation in pyglet.
 # Author: Justin Bunting
 # Created: 2026/03/30
-# Last Modified: 2026/04/17 15:00
+# Last Modified: 2026/04/29 14:07
 
 
 from math import sin, cos, radians, sqrt, log
@@ -36,6 +36,8 @@ window = pyglet.window.Window(
 
 origin = (winSize[0]//2, winSize[1]//2)
 currentScene = None
+# yellow, orange, green, pink, purple, blue
+colors = [(229, 219, 130, 255), (240, 155, 64, 255), (179, 244, 83, 255), (229, 64, 115, 255), (167, 133, 248, 255), (132, 215, 236, 255)]
 
 # uncomment to modify!
 # EOMs.mass = [20, 20] # kg
@@ -73,7 +75,7 @@ def loadScene(symbol):
 		bar = 		Bar(  	origin[0], origin[1], pxLength[0], rotationAnch=180)
 		endPoint1 =  Point(	origin[0], origin[1], radius=EOMs.mass[0], yAnch=-pxLength[0], rotationAnch=180, color=(255, 255, 255, 255))
 		endPoint2 = Point(	origin[0], origin[1], radius=EOMs.mass[0]-5, yAnch=-pxLength[0], rotationAnch=180, color=(200, 30, 30, 255))
-		trail = 	FadeLine(0, 0, colors=((179, 224, 83, 255), (60, 60, 60, 0)), captureRate=1, strokeWidth=4, maxPoints=50)
+		trail = 	FadeLine(0, 0, colors=(colors[0], (60, 60, 60, 0)), captureRate=1, strokeWidth=4, maxPoints=50)
 		
 		# attach objects
 		pSys.addObject(trail, 1)
@@ -103,7 +105,7 @@ def loadScene(symbol):
 		spring = 	Spring(	origin[0], origin[1], pxLength[0], rotationAnch=180)
 		endPoint1 = Point(	origin[0], origin[1], radius=EOMs.mass[0], yAnch=-pxLength[0], rotationAnch=0, color=(255, 255, 255, 255))
 		endPoint2 = Point(	origin[0], origin[1], radius=EOMs.mass[0]-5, yAnch=-pxLength[0], rotationAnch=0, color=(200, 30, 30, 255))
-		trail = 	FadeLine(0, 0, colors=((240, 155, 64, 255), (60, 60, 60, 0)), captureRate=1, strokeWidth=4, maxPoints=300)
+		trail = 	FadeLine(0, 0, colors=(colors[1], (60, 60, 60, 0)), captureRate=1, strokeWidth=4, maxPoints=300)
 		
 		# attach objects
 		pSys.addObject(trail, 1)
@@ -139,7 +141,7 @@ def loadScene(symbol):
 		bar2 =		Bar(	midLoc[0], midLoc[1], length=pxLength[1], rotationAnch=180)
 		endPoint1 = Point(	midLoc[0], midLoc[1], radius=EOMs.mass[1], yAnch=pxLength[1], rotationAnch=0, color=(255, 255, 255, 255))
 		endPoint2 = Point(	midLoc[0], midLoc[1], radius=EOMs.mass[1]-5, yAnch=pxLength[1], rotationAnch=0, color=(200, 30, 30, 255))
-		trail = 	FadeLine(0, 0, colors=((229, 64, 115, 255), (60, 60, 60, 0)), captureRate=1, strokeWidth=4, maxPoints=300)
+		trail = 	FadeLine(0, 0, colors=(colors[2], (60, 60, 60, 0)), captureRate=1, strokeWidth=4, maxPoints=300)
 		
 		# attach objects (bars first to render points above)
 		pSys.addObject(trail, 1)
@@ -183,9 +185,9 @@ def loadScene(symbol):
 		spring2 =	Spring(	midLoc[0], midLoc[1], length=pxLength[1], rotationAnch=180)
 		endPoint1 = Point(	midLoc[0], midLoc[1], radius=EOMs.mass[1], color=(255, 255, 255, 255))
 		endPoint2 = Point(	midLoc[0], midLoc[1], radius=EOMs.mass[1]-5, color=(200, 30, 30, 255))
-		trail1 = 	FadeLine(0, 0, colors=((167, 133, 248, 255), (60, 60, 60, 0)), 
+		trail1 = 	FadeLine(0, 0, colors=(colors[3], (60, 60, 60, 0)), 
 					 			captureRate=1, strokeWidth=4, maxPoints=300)
-		trail2 = 	FadeLine(0, 0, colors=((229, 64, 115, 255), (60, 60, 60, 0)), 
+		trail2 = 	FadeLine(0, 0, colors=(colors[4], (60, 60, 60, 0)), 
 					 			captureRate=1, strokeWidth=4, maxPoints=300)
 		
 		# attach objects (in 2D render order)
@@ -226,18 +228,32 @@ def loadScene(symbol):
 		# generate rotating system of particles, with largest body (i=0) in the center
 		x0 = []
 		masses = []
+		originM = np.array([origin[0] // metersToPixels, origin[1] // metersToPixels, 0])
+		centralM = 5000 # kg
+		massScaling = 1.0e9
+		# print("running")
 		for i in range(n-1):
-			pti = np.array([random.uniform(winSizeMeters[1] * 0.1, winSizeMeters[1] * 0.4), random.uniform(0, 2 * np.pi), 0]) # r, theta, 0
-			originM = np.array([origin[0] // metersToPixels, origin[1] // metersToPixels, 0])
-			omega = np.array([0, 0, 1e-0]) # s^-1
-			# ri = pti - originM
-			ri = originM + np.array([pti[0] * cos(pti[1]), pti[0] * sin(pti[1]), pti[2]])
-			vi = np.cross(omega, ri)
-			x0.extend([pti[0], vi[0], pti[1], vi[1]])
-			masses.append(random.uniform(60, 160))
-			print(pti, originM, ri)
-		x0.extend([winSizeMeters[0]/2, 0, winSizeMeters[1]/2, 0])
-		masses.append(3000)
+			mi = random.uniform(60, 160)
+			
+			# choose some point around central body
+			pti = np.array([random.uniform(winSizeMeters[1] * 0.2, winSizeMeters[1] * 0.4), random.uniform(0, 2 * np.pi), 0]) # r, theta, 0
+			ptixy = np.array([pti[0] * cos(pti[1]), pti[0] * sin(pti[1]), pti[2]])
+			ri = originM + ptixy # convert to origin-centered position
+			
+			# use circular speed and min speed to determine orbit
+			mu = EOMs.G * ((mi + centralM) * massScaling) # m^3 / s^2 -> don't forget masses are scaled in EOM
+			r = np.linalg.norm(ptixy)
+			vc = sqrt(mu / r) # velocity of circular orbit at radius r
+			viu = np.cross([0, 0, 1], ptixy)
+			viu = viu / np.linalg.norm(viu) # unit vector perpendicular to radius
+			vi = vc * viu
+			# print(vc, viu, vi)
+			
+			# input position, velocity, and mass into EOMs
+			x0.extend([ri[0], vi[0], ri[1], vi[1]])
+			masses.append(mi)
+		x0.extend([originM[0], 0, originM[1], 0])
+		masses.append(centralM)
 		pSys.reset(EOMs.nBodyProblem, x0)
 		
 		# create a copy of the EOM's internal mass list for point generation
@@ -245,7 +261,7 @@ def loadScene(symbol):
 		
 		for i in range(n):
 			# generate objects (and set anchors)
-			trail = FadeLine(	x0[i*4] * metersToPixels, 	x0[i*4+2] * metersToPixels, colors=((229, 64, 115, 255), (60, 60, 60, 0)), captureRate=1, strokeWidth=4, maxPoints=300)
+			trail = FadeLine(	x0[i*4] * metersToPixels, 	x0[i*4+2] * metersToPixels, colors=(colors[i % len(colors)], (60, 60, 60, 0)), captureRate=1, strokeWidth=4, maxPoints=300)
 			pt = 	Point(		x0[i*4] * metersToPixels, 	x0[i*4+2] * metersToPixels, radius=log(m[i])**1.7, color=(255, 255, 255, 255))
 			if i == 0: pt2 = Point(	x0[i*4] * metersToPixels, x0[i*4+2] * metersToPixels, radius=log(m[i])**1.7 * 0.9, color=(200, 30, 30, 255))
 			
@@ -262,7 +278,7 @@ def loadScene(symbol):
 		# set simulation values
 		pSys.setArgument((0, 0), 'impulseXY', tuple[float, float], False) # impulse is NOT persistent
 		pSys.setArgument([0], 'impulseBody', list[int])
-		pSys.setArgument(1.0e9, 'massScaling', float)
+		pSys.setArgument(massScaling, 'massScaling', float)
 		pSys.setArgument(1.0e8, 'forceScaling', float)
 		pSys.setArgument((winSizeMeters[0], winSizeMeters[1]), 'windowDimsMeters', tuple[float, float])
 		pSys.setArgument(n, 'n', int)
